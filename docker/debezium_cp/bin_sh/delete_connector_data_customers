@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Delete the 'customers' Kafka connector
+
+SYNOPSIS
+   ./$EXECUTABLE [-?]
+
+DESCRIPTION
+   Deletes the 'customers' Kafka connector
+
+DEFAULT
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+CONNECT_URL=http://localhost:8083/connectors
+curl -X DELETE $CONNECT_URL/customers-sink

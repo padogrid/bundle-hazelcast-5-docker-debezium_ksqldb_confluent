@@ -4,27 +4,25 @@
 # versions that make up the bundle name.
 #
 # Specify ony the version number parts that are required. For example, if the bundle
-# can be run on all versions of Hazelcast 4.x.x, then specify 4 only. If it applies to
-# 4.1.x, then 4.1. If the bundle applies to multiple specific versions, then list them
-# comma-separated. For example, the following applies to Hazelcast 3.12, 4.1.1, and 4.2.
+# can be run on all versions of Geode 1.x.x, then specify 1 only. If it applies to
+# 1.1.x, then 1.1. If the bundle applies to multiple specific versions, then list them
+# comma-separated. For example, the following applies to Geode 1.12.2 and 1.13.x
 #
-# hazelast=3.12,4.1.1,4.2
+# geode=1.12.2,1.13.x
 #
-# To deemphasize products, i.e., product not required, requires multiple products, etc.,
-# then set none=1.
+# If the bunndle does not require a product, then set none=1.
 #
 
-hazelcast=5
+none=1
 #coherence=
 #gemfire=
-#geode=
+#geode=1
 #hadoop=
+#hazelcast=
 #hazelcast-enterprise=
 #jet=
 #jet-enterprise=
 #kafka=
-#none=1
 #pado=
-#redis=
 #snappydata=
 #spark=

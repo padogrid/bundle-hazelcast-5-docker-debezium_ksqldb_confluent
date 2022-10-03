@@ -7,18 +7,15 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
+# https://github.com/takari/maven-wrapper#usage-without-binary-jar
 .mvn/wrapper/maven-wrapper.jar
-
-# Eclipse
-.classpath
-.project
-.settings
-
-# macOS
-.DS_Store
 
 # vi
 *.swp
+
+# Eclipse
+.project
+.settings
 
 # PadoGrid workspace
 /.addonenv.sh
@@ -28,29 +25,28 @@ buildNumber.properties
 bundles
 lib
 plugins
-workspace.code-workspace
+.workspace
+.cluster
 .ipynb_checkpoints
+workspace.code-workspace
 
 # PadoGrid workspace directories
 apps
 clusters
-docker
-groups
+#docker
 k8s
 pods
-.workspace
-.cluster
 
 # Bundle specifics
 archive
 log
 lib
 desktop
+setenv.sh0
 build
-stats
-run
-results
-*.drawio.bkp
-*.sh0
-pom.xml0
-build
+*.xml0
+docker/hazelcast
+docker/debezium_cp/padogrid/nifi
+.terraform*
+terraform.tfstate*
+docker/debezium_cp/padogrid/mysql

@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   ./$EXECUTABLE - Build the Docker cluster environment
+
+SYNOPSIS
+   ./$EXECUTABLE [-clean] [-?]
+
+DESCRIPTION
+   Copies the hazelcast jar files to the 'padogrid' directory which is mounted
+   by the Docker Hazelcast connector container."
+
+   -clean
+             Cleans the '../padgrid/lib/' and '../padogrid/plugins/' directories before starting the build process.
+
+DEFAULT
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+pushd $APP_DIR > /dev/null
+
+# Copy the hazelcast and hazelcast-addon jar files
+if [ ! -d padogrid/lib ]; then
+   mkdir -p padogrid/lib
+fi
+if [ ! -d padogrid/plugins ]; then
+   mkdir -p padogrid/plugins
+fi
+if [ ! -d padogrid/log ]; then
+   mkdir -p padogrid/log
+fi
+if [ ! -d padogrid/etc ]; then
+   mkdir -p padogrid/etc
+fi
+
+if [ "$CLEAN" == "true" ]; then
+   rm padogrid/lib/* padogrid/plugins/*
+   echo ""
+   echo -e "${CHighlight}[CLEAN] ${CNone}padogrid/lib/, padogrid/plugins/"
+   echo ""
+fi
+if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+   cp $HAZELCAST_HOME/lib/hazelcast-enterprise-$HAZELCAST_MAJOR_VERSION_NUMBER*.jar padogrid/lib/
+else
+   cp $HAZELCAST_HOME/lib/hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER*.jar padogrid/lib/
+fi
+cp $PADOGRID_HOME/lib/padogrid-common*.jar padogrid/lib/
+cp $PADOGRID_HOME/hazelcast/lib/hazelcast-addon-common*.jar padogrid/lib/
+cp $PADOGRID_HOME/hazelcast/lib/v5/hazelcast-addon-core*.jar padogrid/lib/
+# Test jars
+cp $PADOGRID_HOME/hazelcast/plugins/v5/hazelcast-addon-core*.jar padogrid/plugins/
+
+# Remove conflicting jar files
+rm padogrid/lib/log4j-slf4j-*.jar
+
+# Download Debezium MySQL connector
+mvn package
+
+popd > /dev/null
+
+#
+# Display build information
+#
+echo ""
+echo "Workspace: $PADOGRID_WORKSPACE"
+echo ""
+echo "Build complete"
+echo ""

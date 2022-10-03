@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Stop NiFi container
+
+SYNOPSIS
+   ./$EXECUTABLE [-?]
+
+DESCRIPTION
+   Stops NiFi container.
+
+DEFAULT
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+docker stop nifi
+echo "NiFi container stopped."
