@@ -185,6 +185,28 @@ Set user name and password as follows:
                 <property name="connection.password">dbz</property>
 ```
 
+We also need to configure the Hazelcast cluster member addresses for this client with the same host IP address we used to configure the Debezium Hazelcast connector in the previous section.
+
+```bash
+cd_app perf_test_ksql
+vi etc/hazelcast-client.xml
+```
+
+Enter the host IP address in `etc/hazelcast-client.xml`. The following assumes the host IP address is `host.docker.internal`. 
+
+```xml
+<hazelcast-client ...>
+   ...
+   <network>
+      <cluster-members>
+         <address>host.docker.internal:5701</address>
+         <address>host.docker.internal:5702</address>
+      </cluster-members>
+   </network>
+   ...
+</hazelcast-client>
+```
+
 ## Startup Sequence
 
 ### 1. Start Hazelcast
@@ -263,7 +285,7 @@ Note that if you run the script more than once then you may see multiple custome
 
 ```bash
 cd_app perf_test_ksql/bin_sh
-./test_group -run -db -prop ../etc/group-factory.properties
+./test_group -run -db -prop ../etc/group-factory-er.properties
 ```
 
 #### 3.1. Dump/Export tables
@@ -574,7 +596,7 @@ The last command should display the connectors that we registered previously.
 The following scripts are provided to drop KSQL/ksqlDB queries using the KSQL/ksqlDB REST API.
 
 ```
-cd_app debezium_cp/bin_sh
+cd_docker debezium_cp/bin_sh
 
 # Drop all queries
 ./ksql_drop_all_queries
