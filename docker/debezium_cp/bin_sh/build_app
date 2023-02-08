@@ -61,7 +61,9 @@ cp $PADOGRID_HOME/hazelcast/lib/v5/hazelcast-addon-core*.jar padogrid/lib/
 cp $PADOGRID_HOME/hazelcast/plugins/v5/hazelcast-addon-core*.jar padogrid/plugins/
 
 # Remove conflicting jar files
-rm padogrid/lib/log4j-slf4j-*.jar
+for log4j_file in padogrid/lib/log4j-slf4j-*.jar; do
+   rm $log4j_file
+done
 
 # Download Debezium MySQL connector
 mvn package
