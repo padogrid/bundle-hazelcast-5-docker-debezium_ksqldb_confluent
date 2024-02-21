@@ -25,7 +25,6 @@ This use case ingests data changes made in the MySQL database into Kafka and Haz
 
 ## Required Software
 
-- PadoGrid 0.9.13+ (PRODUCT=none)
 - Docker Compose
 - Maven 3.x
 
@@ -42,7 +41,7 @@ This use case ingests data changes made in the MySQL database into Kafka and Haz
 
 ```bash
 # Check product versions
-show_products
+show_padogrid
 
 # Install 5.1+
 install_padogrid -product hazelcast-oss
