@@ -3,7 +3,7 @@
 ---
 
 <!-- Platforms -->
-[![Host OS](https://github.com/padogrid/padogrid/wiki/images/padogrid-host-os.drawio.svg)](https://github.com/padogrid/padogrid/wiki/Platform-Host-OS)
+[![PadoGrid 1.x](https://github.com/padogrid/padogrid/wiki/images/padogrid-padogrid-1.x.drawio.svg)](https://github.com/padogrid/padogrid/wiki/Platform-PadoGrid-1.x) [![Host OS](https://github.com/padogrid/padogrid/wiki/images/padogrid-host-os.drawio.svg)](https://github.com/padogrid/padogrid/wiki/Platform-Host-OS) [![Docker](https://github.com/padogrid/padogrid/wiki/images/padogrid-docker.drawio.svg)](https://github.com/padogrid/padogrid/wiki/Platform-Docker)
 
 # Debezium-ksqlDB-Confluent Hazelcast Connector
 
@@ -15,7 +15,7 @@ This bundle integrates Hazelcast with Debezium and Confluent ksqlDB for ingestin
 install_bundle -download -workspace bundle-hazelcast-5-docker-debezium_ksqldb_confluent
 ```
 
-:exclamation: If you are running this bundle on WSL, make sure your workspace is on a shared folder. The Docker volume it creates will not be visible outside of WSL otherwise.
+❗️ If you are running this bundle on WSL, make sure your workspace is on a shared folder. The Docker volume it creates will not be visible outside of WSL otherwise.
 
 ## Use Case
 
@@ -25,7 +25,7 @@ This use case ingests data changes made in the MySQL database into Kafka and Haz
 
 ## Required Software
 
-- Docker Compose
+- Docker
 - Maven 3.x
 
 ## Optional Software
@@ -37,7 +37,7 @@ This use case ingests data changes made in the MySQL database into Kafka and Haz
 
 ### Hazelcast 5.1+
 
-:exclamation: This bundle has been tested with Hazelcast 5.1.3.
+❗️ This bundle has been tested with Hazelcast 5.1.3 and 5.3.6. Hazelcast versions prior to 5.1.x may not work.
 
 ```bash
 # Check product versions
@@ -52,7 +52,19 @@ update_padogrid -product hazelcast-oss
 
 ### Build Bundle
 
-We must first build the bundle by running the `build_app` command as shown below. This command copies the Hazelcast, `padogrid-common`, and `hazelcast-addon-core` jar files to the Docker container mounted volume in the `padogrid` directory so that the Hazelcast Debezium Kafka connector can include them in its class path. It also downloads the ksql JDBC driver jar and its dependencies in the `padogrid/lib/jdbc` directory.
+✏️  *This bundle builds the demo enviroment based on the Hazelcast and Management versions in your workspace. Make sure your workspace has been configured with the desired versions before building the demo environment.*
+
+First, change your cluster context to a Hazelcast cluster. This is required in order to configure the Hazelcast Docker containers.
+
+```bash
+# Create a Hazelcast cluster if it does not already exist.
+create_cluster -product hazelcast
+
+# Switch context
+switch_cluster myhz
+```
+
+Now, build the demo by running the build_app command as shown below. This command copies the Hazelcast, `padogrid-common`, and `hazelcast-addon-core` jar files to the Docker container mounted volume in the `padogrid` directory so that the Hazelcast Debezium Kafka connector can include them in its class path. It also downloads the ksql JDBC driver jar and its dependencies in the `padogrid/lib/jdbc` directory.
 
 ```bash
 cd_docker debezium_cp/bin_sh
@@ -75,59 +87,32 @@ padogrid/
 │   └── hazelcast.xml
 ├── lib
 │   ├── ...
-│   ├── hazelcast-addon-common-5-0.9.21.jar
-│   ├── hazelcast-addon-core-5-0.9.21.jar
+│   ├── hazelcast-addon-common-5-1.0.0.jar
+│   ├── hazelcast-addon-core-5-1.0.0.jar
 │   ├── ...
-│   ├── hazelcast-5.1.3.jar
+│   ├── hazelcast-5.3.6.jar
 │   ├── ...
-│   ├── padogrid-common-0.9.21.jar
-│   ├── ...
+│   └── padogrid-common-1.0.0.jar
 ├── log
 └── plugins
-    └── hazelcast-addon-core-5-0.9.21-tests.jar
+    └── hazelcast-addon-core-5-1.0.0-tests.jar
+```
+
+### Create `my_network`
+
+Let's create the my_network network to which all containers will join.
+
+```bash
+docker network create my_network
 ```
 
 ### Create Hazelcast Docker Containers
 
-Let's create a Hazelcast cluster to run on Docker containers as follows. If you have not installed Hazelcast, then run the `install_padogrid -product hazelcast` command to install the version of your choice and then run the `update_product -product hazelcast` command to set the version. Make sure the Hazelcast version is 5.1+.
+Let's create a Hazelcast cluster to run on Docker containers with the `my_network` network we created in the previous section.
 
 ```bash
-create_docker -product hazelcast -cluster hazelcast -host host.docker.internal
+create_docker -product hazelcast -cluster hazelcast -network my_network
 cd_docker hazelcast
-```
-
-If you are running Docker Desktop, then the host name, `host.docker.internal`, is accessible from the containers as well as the host machine. You can run the `ping` command to check the host name.
-
-```bash
-ping host.docker.internal
-```
-
-If `host.docker.internal` is not defined then you will need to use the host IP address that can be accessed from both the Docker containers and the host machine. Run `create_docker -?` or `man create_docker` to see the usage.
-
-```bash
-create_docker -?
-```
-
-If you are using a host IP other than `host.docker.internal` then you must also make the change in the Debezium Hazelcast connector configuration file as follows.
-
-```bash
-cd_docker debezium_cp
-vi padogrid/etc/hazelcast-client.xml
-```
-
-Replace `host.docker.internal` in `hazelcast-client.xml` with your host IP address.
-
-```xml
-<hazelcast-client ...>
-   ...
-   <network>
-      <cluster-members>
-         <address>host.docker.internal:5701</address>
-         <address>host.docker.internal:5702</address>
-      </cluster-members>
-   </network>
-   ...
-</hazelcast-client>
 ```
 
 If you will be running the Desktop app then you also need to register the `org.hazelcast.demo.nw.data.PortableFactoryImpl` class in the Hazelcast cluster. The `Customer` and `Order` classes implement the `VersionedPortable` interface.
@@ -161,10 +146,10 @@ cd_app perf_test_ksql/bin_sh
 vi setenv.sh
 ```
 
-Enter the version number in `setenv.sh`. For example, 5.1.3, as shown below.
+Enter the version number in `setenv.sh`. For example, 5.3.6, as shown below.
 
 ```bash
-HAZELCAST_VERSION=5.1.3
+HAZELCAST_VERSION=5.3.6
 ```
 
 Build the app by running `build_app` which downloads the MySQL JDBC driver and Hazelcast.
@@ -195,20 +180,23 @@ cd_app perf_test_ksql
 vi etc/hazelcast-client.xml
 ```
 
-Enter the host IP address in `etc/hazelcast-client.xml`. The following assumes the host IP address is `host.docker.internal`. 
+### Check Kafka Connect Hazelcast Configuration
 
-```xml
-<hazelcast-client ...>
-   ...
-   <network>
-      <cluster-members>
-         <address>host.docker.internal:5701</address>
-         <address>host.docker.internal:5702</address>
-      </cluster-members>
-   </network>
-   ...
-</hazelcast-client>
-```
+The Kafka Connect container listens on Kafka streams for database updates and converts them to Hazelcast objects before updating the Hazelcast cluster. Take a look at the `hazelcast-client.xml` file which is loaded by the Kafka Connect container to connect to the Hazelcast cluster. As you can see from below, the member addresses are set to `hazelcast-server1-1` and `hazelcast-server2-1` which are the host names of the Hazelcast members set by Docker Compose.
+
+cd_docker debezium_cp
+cat padogrid/etc/hazelcast-client.xml
+
+Output:
+
+    ...
+	<network>
+		<cluster-members>
+			<address>hazelcast-server1-1:5701</address>
+			<address>hazelcast-server2-1:5701</address>
+		</cluster-members>
+	</network>
+    ...
 
 ## Startup Sequence
 
@@ -233,7 +221,7 @@ Start the following containers.
 - ksqlDB CLI
 - Rest Proxy
 
-:pencil2: *This bundle includes artifacts for Docker Compose and Terraform. You can use either one to launch the containers as shown below.*
+✏️  *This bundle includes artifacts for Docker Compose and Terraform. You can use either one to launch the containers as shown below.*
 
 #### Option 1. Docker Compose
 
@@ -250,7 +238,7 @@ terraform init
 terraform apply -auto-approve
 ```
 
-:exclamation: Wait till all the containers are up before executing the `init_all` script. This can be verified by monitoring the Kafka Connect log. Look for the log message "Kafka Connect started".
+❗️ Wait till all the containers are up before executing the `init_all` script. This can be verified by monitoring the Kafka Connect log. Look for the log message "Kafka Connect started".
 
 ```bash
 docker logs -f connect
@@ -586,7 +574,7 @@ curl -Ss -H "Accept:application/json" localhost:8083/connectors/ | jq
 
 The last command should display the connectors that we registered previously.
 
-```console
+```json
 [
   "nw-connector",
   "customers-sink",

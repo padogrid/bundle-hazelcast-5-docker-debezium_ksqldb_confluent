@@ -15,8 +15,8 @@
 	<cluster-name>dev</cluster-name>
 	<network>
 		<cluster-members>
-			<address>host.docker.internal:5701</address>
-			<address>host.docker.internal:5702</address>
+			<address>hazelcast-server1-1:5701</address>
+			<address>hazelcast-server2-1:5701</address>
 		</cluster-members>
 		
 		<!-- buffer-size in KiB. Increase the buffer size as needed to get better throughput. -->
