@@ -9,39 +9,16 @@ terraform {
 
 provider "docker" {}
 
-resource "docker_network" "debezium_cp" {
-  name = "debezium_cp_default"
-}
-
-resource "docker_image" "zookeeper" {
-  name = "confluentinc/cp-zookeeper:${var.cp_version}"
-  keep_locally = true
-}
-
-resource "docker_container" "zookeeper" {
-  image = docker_image.zookeeper.latest
-  name  = "zookeeper"
-  hostname = "zookeeper"
-  ports {
-    internal = 2181
-    external = 2181
-  }
-  env = ["ZOOKEEPER_CLIENT_PORT=2181", "ZOOKEEPER_TICK_TIME=2000"]
-  restart = "no"
-  must_run = "true"
-  network_mode= "${docker_network.debezium_cp.name}"
-}
-
 resource "docker_image" "broker" {
   name = "confluentinc/cp-server:${var.cp_version}"
   keep_locally = true
 }
 
 resource "docker_container" "broker" {
-  image = docker_image.broker.latest
+  image = docker_image.broker.name
   name  = "broker"
   hostname = "broker"
-  depends_on = [docker_container.zookeeper]
+  depends_on = []
   ports {
     internal = 9092
     external = 9092
@@ -50,27 +27,27 @@ resource "docker_container" "broker" {
     internal = 9101
     external = 9930
   }
-  env = [ "KAFKA_BROKER_ID=1", 
-      "KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181",
-      "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT",
+  env = [
+      "KAFKA_NODE_ID=1",
+      "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT",
       "KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092",
-      "KAFKA_METRIC_REPORTERS=io.confluent.metrics.reporter.ConfluentMetricsReporter",
       "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1",
       "KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0",
-      "KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR=1",
-      "KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR=1",
       "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1",
       "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1",
       "KAFKA_JMX_PORT=9101",
       "KAFKA_JMX_HOSTNAME=localhost",
-      "KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL=http://schema-registry:8081",
-      "CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS=broker:29092",
-      "CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS=1",
-      "CONFLUENT_METRICS_ENABLE=true",
-      "CONFLUENT_SUPPORT_CUSTOMER_ID=anonymous"]
+      "KAFKA_PROCESS_ROLES=broker,controller",
+      "KAFKA_CONTROLLER_QUORUM_VOTERS=1@broker:29093",
+      "KAFKA_LISTENERS=PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092",
+      "KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT",
+      "KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER",
+      "KAFKA_LOG_DIRS=/tmp/kraft-combined-logs",
+      "CLUSTER_ID=8dQyQkXOT-i7Hcu2FFJvPQ"
+      ]
   restart = "no"
   must_run = "true"
-  network_mode= "${docker_network.debezium_cp.name}"
+  network_mode= "my_network"
 }
 
 resource "docker_image" "schema-registry" {
@@ -79,7 +56,7 @@ resource "docker_image" "schema-registry" {
 }
 
 resource "docker_container" "schema-registry" {
-  image = docker_image.schema-registry.latest
+  image = docker_image.schema-registry.name
   name  = "schema-registry"
   hostname = "schema-registry"
   depends_on = [docker_container.broker]
@@ -92,7 +69,7 @@ resource "docker_container" "schema-registry" {
       "SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081"]
   restart = "no"
   must_run = "true"
-  network_mode= "${docker_network.debezium_cp.name}"
+  network_mode= "my_network"
 }
 
 resource "docker_image" "mysql" {
@@ -101,7 +78,7 @@ resource "docker_image" "mysql" {
 }
 
 resource "docker_container" "mysql" {
-  image = docker_image.mysql.latest
+  image = docker_image.mysql.name
   name  = "mysql"
   hostname = "mysql"
   ports {
@@ -118,18 +95,19 @@ resource "docker_container" "mysql" {
       "MYSQL_PASSWORD=mysqlpw"]
   restart = "no"
   must_run = "true"
-  network_mode= "${docker_network.debezium_cp.name}"
+  network_mode= "my_network"
 }
 
 resource "docker_image" "connect" {
-  name = "cnfldemos/cp-server-connect-datagen:0.5.0-6.2.0"
+  name = "cnfldemos/cp-server-connect-datagen:${var.cp_server_connect_datagen_version}"
   keep_locally = true
 }
 
 resource "docker_container" "connect" {
-  image = docker_image.connect.latest
+  image = docker_image.connect.name
   name  = "connect"
   hostname = "connect"
+  depends_on = [docker_container.broker, docker_container.schema-registry, docker_container.mysql]
   ports {
     internal = 8083
     external = 8083
@@ -140,7 +118,8 @@ resource "docker_container" "connect" {
   }
 
   # CLASSPATH required due to CC-2422
-  env = ["CONNECT_BOOTSTRAP_SERVERS=broker:29092",
+  env = [
+      "CONNECT_BOOTSTRAP_SERVERS=broker:29092",
       "CONNECT_REST_ADVERTISED_HOST_NAME=connect",
       "CONNECT_GROUP_ID=compose-connect-group",
       "CONNECT_CONFIG_STORAGE_TOPIC=docker-connect-configs",
@@ -158,10 +137,11 @@ resource "docker_container" "connect" {
       "CONNECT_PRODUCER_INTERCEPTOR_CLASSES=io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor",
       "CONNECT_CONSUMER_INTERCEPTOR_CLASSES=io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor",
       "CONNECT_PLUGIN_PATH=/usr/share/java,/usr/share/confluent-hub-components,/padogrid/plugins,/padogrid/lib",
-      "CONNECT_LOG4J_LOGGERS=org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR"]
+      "CONNECT_LOG4J_LOGGERS=org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR"
+      ]
   restart = "no"
   must_run = "true"
-  network_mode= "${docker_network.debezium_cp.name}"
+  network_mode= "my_network"
 }
 
 resource "docker_image" "control-center" {
@@ -170,7 +150,7 @@ resource "docker_image" "control-center" {
 }
 
 resource "docker_container" "control-center" {
-  image = docker_image.control-center.latest
+  image = docker_image.control-center.name
   name  = "control-center"
   hostname = "control-center"
   depends_on = [docker_container.broker, docker_container.schema-registry, docker_container.connect, docker_container.ksqldb-server]
@@ -191,7 +171,7 @@ resource "docker_container" "control-center" {
       "PORT: 9021"]
   restart = "no"
   must_run = "true"
-  network_mode= "${docker_network.debezium_cp.name}"
+  network_mode= "my_network"
 }
 
 resource "docker_image" "ksqldb-server" {
@@ -200,7 +180,7 @@ resource "docker_image" "ksqldb-server" {
 }
 
 resource "docker_container" "ksqldb-server" {
-  image = docker_image.ksqldb-server.latest
+  image = docker_image.ksqldb-server.name
   name  = "ksqldb-server"
   hostname = "ksqldb-server"
   depends_on = [docker_container.broker, docker_container.connect]
@@ -223,7 +203,7 @@ resource "docker_container" "ksqldb-server" {
       "KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE=true"]
   restart = "no"
   must_run = "true"
-  network_mode= "${docker_network.debezium_cp.name}"
+  network_mode= "my_network"
 }
 
 resource "docker_image" "ksqldb-cli" {
@@ -232,7 +212,7 @@ resource "docker_image" "ksqldb-cli" {
 }
 
 resource "docker_container" "ksqldb-cli" {
-  image = docker_image.ksqldb-cli.latest
+  image = docker_image.ksqldb-cli.name
   name  = "ksqldb-cli"
   hostname = "ksqldb-cli"
   depends_on = [docker_container.broker, docker_container.connect, docker_container.ksqldb-server]
@@ -240,7 +220,7 @@ resource "docker_container" "ksqldb-cli" {
   tty=true
   restart = "no"
   must_run = "true"
-  network_mode= "${docker_network.debezium_cp.name}"
+  network_mode= "my_network"
 }
 
 resource "docker_image" "rest-proxy" {
@@ -249,7 +229,7 @@ resource "docker_image" "rest-proxy" {
 }
 
 resource "docker_container" "rest-proxy" {
-  image = docker_image.rest-proxy.latest
+  image = docker_image.rest-proxy.name
   name  = "rest-proxy"
   hostname = "rest-proxy"
   depends_on = [docker_container.broker, docker_container.schema-registry]
@@ -264,20 +244,19 @@ resource "docker_container" "rest-proxy" {
       "KAFKA_REST_SCHEMA_REGISTRY_URL=http://schema-registry:8081"]
   restart = "no"
   must_run = "true"
-  network_mode= "${docker_network.debezium_cp.name}"
+  network_mode= "my_network"
 }
 
 #resource "docker_image" "padogrid" {
-#  name         = "padogrid/padogrid:latest"
+#  name         = "padogrid/padogrid"
 #  keep_locally = true
 #}
 #
 #resource "docker_container" "padogrid" {
-#  image = docker_image.padogrid.latest
+#  image = docker_image.padogrid.name
 #  name  = "padogrid"
 #  ports {
 #    internal = 8080
 #    external = 8080
 #  }
 #}
-

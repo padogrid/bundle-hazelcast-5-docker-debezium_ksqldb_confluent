@@ -204,7 +204,7 @@ Output:
 
 ```bash
 cd_docker hazelcast
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 2. Start containers
@@ -227,7 +227,7 @@ Start the following containers.
 
 ```bash
 cd_docker debezium_cp
-docker-compose up -d
+docker compose up -d
 ```
 
 #### Option 2. Terraform
@@ -604,7 +604,7 @@ cd_docker debezium_cp/bin_sh
 To view the map contents, run the `read_cache` command as follows:
 
 ```bash
-cd_app perf_test_ksql; cd bin_sh
+cd_app perf_test_ksql/bin_sh
 ./read_cache nw/customers
 ./read_cache nw/orders
 ```
@@ -709,7 +709,7 @@ padogrid/nifi/data/avro/
 # Stop KSQL and Kafka containers
 cd_docker debezium_cp
 # Option 1. Stop via Docker Compose
-docker-compose down
+docker compose down
 # Option 2. Stop via Terraform
 terraform destroy
 
@@ -719,7 +719,7 @@ cd_docker debezium_cp/bin_sh
 
 # Stop Hazelcast containers
 cd_docker hazelcast
-docker-compose down
+docker compose down
 
 # Prune all stopped containers
 docker container prune
